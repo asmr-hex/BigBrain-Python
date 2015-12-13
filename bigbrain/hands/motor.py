@@ -5,6 +5,7 @@ import RPi.GPIO as GPIO
 
 from bigbrain.hands import spp
 from bigbrain.hands import cream
+from bigbrain.hands.Hand import Hand
 
 class Motor:
     """ Handles the detection and configuration of the controller
@@ -45,7 +46,8 @@ class Motor:
             GPIO.output(self._PORTS['mb'], mb)
             GPIO.output(self._PORTS['lsb'], lsb)
             # Read value at port (TODO: talk to SPI flash IC)
-            data = self._readADC(0)
+            #data = self._readADC(0)
+            Hand.readPalms(self._SPI)
             time.sleep(0.5)
             
 
@@ -64,6 +66,14 @@ class Motor:
             GPIO.output(self._PORTS['lsb'], lsb)
             data = self._readADC(0)
             time.sleep(0.5)
+
+    def nameHand(self, p, name):
+        """ give/change the name of this poor hand on port p! """
+        msb, mb, lsb = cream.num2bin(p)
+        GPIO.output(self._PORTS['msb'], msb)
+        GPIO.output(self._PORTS['mb'], mb)
+        GPIO.output(self._PORTS['lsb'], lsb)
+        Hand.registerPalms(self._SPI, name)
 
     def _readADC(self, nADC):
         if (nADC > 7) or (nADC < 0):
