@@ -26,9 +26,10 @@ class Motor:
         # Initialize GPIO ports
         GPIO.setmode(GPIO.BCM)
         for idx, pin in enumerate(self._PORTS.values()):
+            # set pin to output mode and init low
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.LOW)
-        # Initialize SPI ports
+        # initialize SPI ports
         self._SPI = spidev.SpiDev()
         # Get available types of hands
         self._handTypes = [hand for imp, hand, ispkg in pkgutil.iter_modules(spp.__path__)]
@@ -40,14 +41,12 @@ class Motor:
         self._SPI.open(0, self._MODE['find'])
         # Scan each identity port (ports 0-7, CS 1)
         for port in xrange(0, self.MAX_PLAYERS):
-            # Select a port
-            msb, mb, lsb = cream.num2bin(port)
-            GPIO.output(self._PORTS['msb'], msb)
-            GPIO.output(self._PORTS['mb'], mb)
-            GPIO.output(self._PORTS['lsb'], lsb)
-            # Read value at port (TODO: talk to SPI flash IC)
+            # select a port
+            self.__select_port(port)
+            # read value at port (TODO: talk to SPI flash IC)
             #data = self._readADC(0)
-            Hand.readPalms(self._SPI)
+            # check for a known hand type.
+            identity = Hand.readPalms(self._SPI)
             time.sleep(0.5)
             
 
@@ -59,21 +58,44 @@ class Motor:
         # scan each identity port (ports 0-7, CS 0)
         for port in xrange(0, self.MAX_PLAYERS):
             # select a port
-            msb, mb, lsb = cream.num2bin(port)
-            print str(msb) + str(mb) + str(lsb)
-            GPIO.output(self._PORTS['msb'], msb)
-            GPIO.output(self._PORTS['mb'], mb)
-            GPIO.output(self._PORTS['lsb'], lsb)
+            self.__select_port(port)
             data = self._readADC(0)
             time.sleep(0.5)
 
     def nameHand(self, p, name):
         """ give/change the name of this poor hand on port p! """
-        msb, mb, lsb = cream.num2bin(p)
-        GPIO.output(self._PORTS['msb'], msb)
-        GPIO.output(self._PORTS['mb'], mb)
-        GPIO.output(self._PORTS['lsb'], lsb)
+        # open SPI device for find mode
+        self._SPI.open(0, self._MODE['find'])
+        # select a port
+        self.__select_port(p)
+        #self.__writeEnable()
+        #print "hooray"
         Hand.registerPalms(self._SPI, name)
+
+
+    def __writeEnable(self):
+        # write enable instruction
+        instruction = 6
+        self._SPI.xfer2([instruction])
+    
+
+    def __writeDisable(self):
+        # write disable instruction
+        instruction = 4
+        self._SPI.xfer2([instruction])
+
+    def __eraseSector(self):
+        # erase sector instruction
+        instruction = 0x20
+        sector = 0xFFFFFF
+        self._SPI.xfer([instruction, sector])
+
+    def __pageProgram(self, data):
+        # page program instruction
+        instruction = 0x02
+        sector = 0xFFFFFF
+        self._SPI.xfer([instruction, sector, data])
+
 
     def _readADC(self, nADC):
         if (nADC > 7) or (nADC < 0):
@@ -81,3 +103,21 @@ class Motor:
         r = self._SPI.xfer([1, (8+nADC)<<4, 0])
         out = ((r[1]&3) << 8) + r[2]
         return out
+
+    def __select_port(self, n):
+        """ selects a port.
+
+        Using an int in [0-7], activte the chip select for
+        device n.
+
+        Args:
+            n (int): the port corresponding to the device to activate.
+        """
+        # convert int to its binary representation.
+        msb, mb, lsb = cream.num2bin(n)
+        # set GPIOs to output bit pattern.
+        GPIO.output(self._PORTS['msb'], msb)
+        GPIO.output(self._PORTS['mb'], mb)
+        GPIO.output(self._PORTS['lsb'], lsb)        
+        
+        
