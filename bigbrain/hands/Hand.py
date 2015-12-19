@@ -47,12 +47,11 @@ class Hand:
     @staticmethod
     def __pageProgram(spi, data):
         # convert data to hex
-        data = int(data.encode("hex"), 16)
-        data = 0xABCDE
+        data = map(ord, data)
         # page program instruction
         instruction = 0x02
         sector = 0xFFFFFF
-        spi.xfer2([instruction, sector, data])
+        spi.xfer2([instruction, sector] + data)
 
     def readHand(self):
         """ Read from ADC of individual hand. """
