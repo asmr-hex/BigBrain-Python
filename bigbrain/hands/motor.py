@@ -47,6 +47,7 @@ class Motor:
             #data = self._readADC(0)
             # check for a known hand type.
             identity = Hand.readPalms(self._SPI)
+            print "name:\t%s" % identity
             time.sleep(0.5)
             
 
@@ -68,34 +69,7 @@ class Motor:
         self._SPI.open(0, self._MODE['find'])
         # select a port
         self.__select_port(p)
-        #self.__writeEnable()
-        #print "hooray"
         Hand.registerPalms(self._SPI, name)
-
-
-    def __writeEnable(self):
-        # write enable instruction
-        instruction = 6
-        self._SPI.xfer2([instruction])
-    
-
-    def __writeDisable(self):
-        # write disable instruction
-        instruction = 4
-        self._SPI.xfer2([instruction])
-
-    def __eraseSector(self):
-        # erase sector instruction
-        instruction = 0x20
-        sector = 0xFFFFFF
-        self._SPI.xfer([instruction, sector])
-
-    def __pageProgram(self, data):
-        # page program instruction
-        instruction = 0x02
-        sector = 0xFFFFFF
-        self._SPI.xfer([instruction, sector, data])
-
 
     def _readADC(self, nADC):
         if (nADC > 7) or (nADC < 0):
